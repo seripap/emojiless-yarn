@@ -17,6 +17,8 @@
 
 ---
 
+**EMOJILESS**: This is a forked version of yarn that  will mirror official releases of Yarn, minus  emojis. Because I absolutely hate emojis. And I have no soul.
+
 **Fast:** Yarn caches every package it downloads so it never needs to download the same package again. It also parallelizes operations to maximize resource utilization so install times are faster than ever.
 
 **Reliable:** Using a detailed, concise lockfile format and a deterministic algorithm for installs, Yarn is able to guarantee that an install that worked on one system will work exactly the same way on any other system.
@@ -30,11 +32,16 @@
 * **Network Performance.** Yarn efficiently queues up requests and avoids request waterfalls in order to maximize network utilization.
 * **Network Resilience.** A single request failing won't cause an install to fail. Requests are retried upon failure.
 * **Flat Mode.** Yarn resolves mismatched versions of dependencies to a single version to avoid creating duplicates.
-* **Less emojis.** 🐈
+* **No emojis.** </3
 
-## Installing Yarn
+## Installing Emojiless Yarn
 
-Read the [Installation Guide](https://yarnpkg.com/en/docs/install) on our website for detailed instructions on how to install Yarn.
+```
+$ git clone https://github.com/seripap/yarn emojiless-yarn
+$ emojiless-yarn/scripts/install-emojiless.sh
+```
+
+To revert, simply **npm install -g yarn**
 
 ## Using Yarn
 
