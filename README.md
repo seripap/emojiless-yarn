@@ -37,8 +37,8 @@
 ## Installing Emojiless Yarn
 
 ```
-$ git clone https://github.com/seripap/yarn emojiless-yarn
-$ emojiless-yarn/scripts/install-emojiless.sh
+$ git clone https://github.com/seripap/emojiless-yarn
+$ cd emojiless-yarn && ./scripts/install-emojiless.sh
 ```
 
 To revert, simply **npm install -g yarn**
