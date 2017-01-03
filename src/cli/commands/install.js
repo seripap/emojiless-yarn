@@ -26,7 +26,6 @@ import {sortAlpha} from '../../util/misc.js';
 
 const invariant = require('invariant');
 const semver = require('semver');
-const emoji = require('node-emoji');
 const isCI = require('is-ci');
 const path = require('path');
 
@@ -375,7 +374,7 @@ export class Install {
     } = await this.fetchRequestFromCwd();
 
     steps.push(async (curr: number, total: number) => {
-      this.reporter.step(curr, total, this.reporter.lang('resolvingPackages'), emoji.get('mag'));
+      this.reporter.step(curr, total, this.reporter.lang('resolvingPackages'));
       await this.resolver.init(this.prepareRequests(depRequests), this.flags.flat);
       patterns = await this.flatten(this.preparePatterns(rawPatterns));
       return {bailout: await this.bailout(usedPatterns)};
@@ -383,7 +382,7 @@ export class Install {
 
     steps.push(async (curr: number, total: number) => {
       this.markIgnored(ignorePatterns);
-      this.reporter.step(curr, total, this.reporter.lang('fetchingPackages'), emoji.get('truck'));
+      this.reporter.step(curr, total, this.reporter.lang('fetchingPackages'));
       await this.fetcher.init();
       await this.compatibility.init();
     });
@@ -392,7 +391,7 @@ export class Install {
       // remove integrity hash to make this operation atomic
       const loc = await this.getIntegrityHashLocation();
       await fs.unlink(loc);
-      this.reporter.step(curr, total, this.reporter.lang('linkingDependencies'), emoji.get('link'));
+      this.reporter.step(curr, total, this.reporter.lang('linkingDependencies'));
       await this.linker.init(patterns);
     });
 
@@ -401,7 +400,6 @@ export class Install {
         curr,
         total,
         this.flags.force ? this.reporter.lang('rebuildingPackages') : this.reporter.lang('buildingFreshPackages'),
-        emoji.get('page_with_curl'),
       );
 
       if (this.flags.ignoreScripts) {
@@ -419,7 +417,6 @@ export class Install {
           curr,
           total,
           this.reporter.lang('savingHar', filename),
-          emoji.get('black_circle_for_record'),
         );
         await this.config.requestManager.saveHar(filename);
       });
@@ -427,7 +424,7 @@ export class Install {
 
     if (await this.shouldClean()) {
       steps.push(async (curr: number, total: number) => {
-        this.reporter.step(curr, total, this.reporter.lang('cleaningModules'), emoji.get('recycle'));
+        this.reporter.step(curr, total, this.reporter.lang('cleaningModules'));
         await clean(this.config, this.reporter);
       });
     }

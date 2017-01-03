@@ -71,10 +71,7 @@ commander.option(
   '--mutex <type>[:specifier]',
   'use a mutex to ensure only one yarn instance is executing',
 );
-commander.option(
-  '--no-emoji',
-  'disable emoji in output',
-);
+
 commander.option('--proxy <host>', '');
 commander.option('--https-proxy <host>', '');
 commander.option(
@@ -188,7 +185,6 @@ if (commander.json) {
   Reporter = JSONReporter;
 }
 const reporter = new Reporter({
-  emoji: commander.emoji && process.stdout.isTTY && process.platform === 'darwin',
   verbose: commander.verbose,
   noProgress: !commander.progress,
 });

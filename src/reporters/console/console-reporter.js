@@ -34,13 +34,6 @@ export default class ConsoleReporter extends BaseReporter {
 
   _lastCategorySize: number;
 
-  _prependEmoji(msg: string, emoji: ?string): string {
-    if (this.emoji && emoji && this.isTTY) {
-      msg = `${emoji}  ${msg}`;
-    }
-    return msg;
-  }
-
   _logCategory(category: string, color: FormatKeys, msg: string) {
     this._lastCategorySize = category.length;
     this._log(`${this.format[color](category)} ${msg}`);
@@ -82,8 +75,7 @@ export default class ConsoleReporter extends BaseReporter {
     this.log(builtRows.join('\n'));
   }
 
-  step(current: number, total: number, msg: string, emoji?: string) {
-    msg = this._prependEmoji(msg, emoji);
+  step(current: number, total: number, msg: string) {
 
     if (msg.endsWith('?')) {
       msg = `${removeSuffix(msg, '?')}...?`;
@@ -133,7 +125,7 @@ export default class ConsoleReporter extends BaseReporter {
       const peakMemory = (this.peakMemory / 1024 / 1024).toFixed(2);
       msg += ` Peak memory usage ${peakMemory}MB.`;
     }
-    this.log(this._prependEmoji(msg, '✨'));
+    this.log(msg);
   }
 
   log(msg: string) {

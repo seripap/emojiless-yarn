@@ -30,7 +30,7 @@
 * **Network Performance.** Yarn efficiently queues up requests and avoids request waterfalls in order to maximize network utilization.
 * **Network Resilience.** A single request failing won't cause an install to fail. Requests are retried upon failure.
 * **Flat Mode.** Yarn resolves mismatched versions of dependencies to a single version to avoid creating duplicates.
-* **More emojis.** 🐈
+* **Less emojis.** 🐈
 
 ## Installing Yarn
 

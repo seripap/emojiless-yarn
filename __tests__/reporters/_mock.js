@@ -43,7 +43,6 @@ export default function<T>(
       stdin: new Stdin(),
       stdout: buildStream('stdout'),
       stderr: buildStream('stderr'),
-      emoji: true,
     };
 
     const reporter = new Reporter(opts);

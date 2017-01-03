@@ -14,7 +14,6 @@ export const requireLockfile = true;
 
 const invariant = require('invariant');
 const bytes = require('bytes');
-const emoji = require('node-emoji');
 const path = require('path');
 
 async function cleanQuery(config: Config, query: string): Promise<string> {
@@ -136,10 +135,10 @@ export async function run(
 
   const query = await cleanQuery(config, args[0]);
 
-  reporter.step(1, 4, reporter.lang('whyStart', args[0]), emoji.get('thinking_face'));
+  reporter.step(1, 4, reporter.lang('whyStart', args[0]));
 
   // init
-  reporter.step(2, 4, reporter.lang('whyInitGraph'), emoji.get('truck'));
+  reporter.step(2, 4, reporter.lang('whyInitGraph'));
   const lockfile = await Lockfile.fromDirectory(config.cwd, reporter);
   const install = new Install(flags, config, reporter, lockfile);
   const {requests: depRequests, patterns} = await install.fetchRequestFromCwd();
@@ -147,7 +146,7 @@ export async function run(
   const hoisted = await install.linker.getFlatHoistedTree(patterns);
 
   // finding
-  reporter.step(3, 4, reporter.lang('whyFinding'), emoji.get('mag'));
+  reporter.step(3, 4, reporter.lang('whyFinding'));
 
   let match;
   for (const [loc, info] of hoisted) {
@@ -221,7 +220,7 @@ export async function run(
   }
 
   // package sizes
-  reporter.step(4, 4, reporter.lang('whyCalculating'), emoji.get('aerial_tramway'));
+  reporter.step(4, 4, reporter.lang('whyCalculating'));
 
   let packageSize = 0;
   let directSizes = [];

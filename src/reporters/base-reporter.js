@@ -27,7 +27,6 @@ export type ReporterOptions = {
   stdout?: Stdout,
   stderr?: Stdout,
   stdin?: Stdin,
-  emoji?: boolean,
   noProgress?: boolean,
 };
 
@@ -53,7 +52,6 @@ export default class BaseReporter {
     this.stdout = opts.stdout || process.stdout;
     this.stderr = opts.stderr || process.stderr;
     this.stdin = opts.stdin || process.stdin;
-    this.emoji = !!opts.emoji;
     this.noProgress = !!opts.noProgress || isCI;
     this.isVerbose = !!opts.verbose;
 
@@ -71,7 +69,6 @@ export default class BaseReporter {
   stderr: Stdout;
   stdin: Stdin;
   isTTY: boolean;
-  emoji: boolean;
   noProgress: boolean;
   isVerbose: boolean;
   format: Formatter;
@@ -142,7 +139,7 @@ export default class BaseReporter {
   tree(key: string, obj: Trees) {}
 
   // called whenever we begin a step in the CLI.
-  step(current: number, total: number, message: string, emoji?: string) {}
+  step(current: number, total: number, message: string) {}
 
   // a error message has been triggered. this however does not always meant an abrupt
   // program end.
