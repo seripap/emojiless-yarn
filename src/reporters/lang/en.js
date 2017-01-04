@@ -120,6 +120,7 @@ const messages = {
   cleaning: 'Cleaning modules',
   cleanCreatingFile: 'Creating $0',
 
+  binLinkCollision: "There's already a linked binary called $0 in your global Yarn bin. Could not link this package's $0 bin entry.",
   linkCollision: "There's already a module called $0 registered.",
   linkMissing: 'No registered module found called $0.',
   linkInstallMessage: 'You can now run `yarn link $0` in the projects where you want to use this module and it will be used instead.',
@@ -146,6 +147,7 @@ const messages = {
   optionalCompatibilityExcluded: '$0 is an optional dependency and failed compatibility check. Excluding it from installation.',
   optionalModuleFail: 'This module is OPTIONAL, you can safely ignore this error',
   optionalModuleScriptFail: 'Error running install script for optional dependency: $0',
+  optionalModuleCleanupFail: 'Could not cleanup build artifacts from failed install: $0',
 
   unmetPeer: '$0 has unmet peer dependency $1.',
   incorrectPeer: '$0 has incorrect peer dependency $1.',
