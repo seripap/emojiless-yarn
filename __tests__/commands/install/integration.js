@@ -148,6 +148,18 @@ test.concurrent('--production flag ignores dev dependencies', () => {
   });
 });
 
+test.concurrent('--production flag does not link dev dependency bin scripts', () => {
+  return runInstall({production: true, binLinks: true}, 'install-production-bin', async (config) => {
+    assert.ok(
+      !await fs.exists(path.join(config.cwd, 'node_modules', '.bin', 'touch')),
+    );
+
+    assert.ok(
+      await fs.exists(path.join(config.cwd, 'node_modules', '.bin', 'rimraf')),
+    );
+  });
+});
+
 test.concurrent("doesn't write new lockfile if existing one satisfied", (): Promise<void> => {
   return runInstall({}, 'install-dont-write-lockfile-if-satisfied', async (config): Promise<void> => {
     const lockfile = await fs.readFile(path.join(config.cwd, 'yarn.lock'));
@@ -208,6 +220,45 @@ test.concurrent('install file: protocol with relative paths', (): Promise<void> 
     assert.equal(
       await fs.readFile(path.join(config.cwd, 'node_modules', 'root-a', 'index.js')),
       'foobar\n',
+    );
+  });
+});
+
+test.concurrent('install file: protocol without cache', async (): Promise<void> => {
+  const fixturesLoc = path.join(__dirname, '..', '..', 'fixtures', 'install');
+  const compLoc = path.join(fixturesLoc, 'install-file-without-cache', 'comp', 'index.js');
+
+  await fs.writeFile(compLoc, 'foo\n');
+  await runInstall({}, 'install-file-without-cache', async (config, reporter) => {
+    assert.equal(
+      await fs.readFile(path.join(config.cwd, 'node_modules', 'comp', 'index.js')),
+      'foo\n',
+    );
+
+    await fs.writeFile(compLoc, 'bar\n');
+
+    const reinstall = new Install({}, config, reporter, await Lockfile.fromDirectory(config.cwd));
+    await reinstall.init();
+
+    // TODO: This should actually be equal. See https://github.com/yarnpkg/yarn/pull/2443.
+    assert.notEqual(
+      await fs.readFile(path.join(config.cwd, 'node_modules', 'comp', 'index.js')),
+      'bar\n',
+    );
+  });
+});
+
+test.concurrent('install file: local packages with local dependencies', async (): Promise<void> => {
+  await runInstall({}, 'install-file-local-dependency', async (config, reporter) => {
+    const reinstall = new Install({}, config, reporter, await Lockfile.fromDirectory(config.cwd));
+    await reinstall.init();
+    assert.equal(
+      await fs.readFile(path.join(config.cwd, 'node_modules', 'a', 'index.js')),
+      'foo\n',
+    );
+    assert.equal(
+      await fs.readFile(path.join(config.cwd, 'node_modules', 'b', 'index.js')),
+      'bar\n',
     );
   });
 });
@@ -792,12 +843,19 @@ test.concurrent('a subdependency of an optional dependency that fails should be 
     });
   });
 
-// disabled while fix is not merged
-test.skip('should not loose dependencies when installing with --production', 
-(): Promise<void> => {
-  // revealed https://github.com/yarnpkg/yarn/issues/2263
-  return runInstall({production: true}, 'prod-should-keep-subdeps', async (config) => {
-    // would be hoisted from gulp/vinyl-fs/glob-stream/minimatch/brace-expansion/balanced-match
-    assert.equal(await getPackageVersion(config, 'balanced-match'), '0.4.2');
+test.concurrent('should not loose dependencies when installing with --production',
+  (): Promise<void> => {
+    // revealed https://github.com/yarnpkg/yarn/issues/2263
+    return runInstall({production: true}, 'prod-should-keep-subdeps', async (config) => {
+      // would be hoisted from gulp/vinyl-fs/glob-stream/minimatch/brace-expansion/balanced-match
+      assert.equal(await getPackageVersion(config, 'balanced-match'), '0.4.2');
+    });
   });
-});
+
+// https://github.com/yarnpkg/yarn/issues/2470
+test.concurrent('a allows dependency with [] in os cpu requirements',
+  (): Promise<void> => {
+    return runInstall({}, 'empty-os', async (config) => {
+      assert(await fs.exists(path.join(config.cwd, 'node_modules', 'feed')));
+    });
+  });
