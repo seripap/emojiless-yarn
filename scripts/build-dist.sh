@@ -7,7 +7,7 @@ npm pack
 rm -rf dist
 mkdir dist
 mkdir -p artifacts
-mv yarn-*.tgz dist/pack.tgz
+mv *.tgz dist/pack.tgz
 
 cd dist
 umask 0022 # Ensure permissions are correct (0755 for dirs, 0644 for files)
