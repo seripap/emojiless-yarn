@@ -49,11 +49,12 @@ export type IntegrityMatch = {
 
 type Flags = {
   // install
+  har: boolean,
   ignorePlatform: boolean,
   ignoreEngines: boolean,
   ignoreScripts: boolean,
   ignoreOptional: boolean,
-  har: boolean,
+  linkDuplicates: boolean,
   force: boolean,
   flat: boolean,
   lockfile: boolean,
@@ -74,7 +75,7 @@ type Flags = {
 
 function getUpdateCommand(): ?string {
   if (YARN_INSTALL_METHOD === 'tar') {
-    return 'curl -o- -L https://yarnpkg.com/install.sh | bash';
+    return `curl -o- -L ${constants.YARN_INSTALLER_SH} | bash`;
   }
 
   if (YARN_INSTALL_METHOD === 'homebrew') {
@@ -97,13 +98,17 @@ function getUpdateCommand(): ?string {
     return 'choco upgrade yarn';
   }
 
+  if (YARN_INSTALL_METHOD === 'apk') {
+    return 'apk update && apk add -u yarn';
+  }
+
   return null;
 }
 
 function getUpdateInstaller(): ?string {
   // Windows
   if (YARN_INSTALL_METHOD === 'msi') {
-    return 'https://yarnpkg.com/latest.msi';
+    return constants.YARN_INSTALLER_MSI;
   }
 
   return null;
@@ -123,6 +128,7 @@ function normalizeFlags(config: Config, rawFlags: Object): Flags {
     pureLockfile: !!rawFlags.pureLockfile,
     skipIntegrity: !!rawFlags.skipIntegrity,
     frozenLockfile: !!rawFlags.frozenLockfile,
+    linkDuplicates: !!rawFlags.linkDuplicates,
 
     // add
     peer: !!rawFlags.peer,
@@ -298,8 +304,7 @@ export class Install {
     const haveLockfile = await fs.exists(path.join(this.config.cwd, constants.LOCKFILE_FILENAME));
 
     if (this.flags.frozenLockfile && !this.lockFileInSync(patterns)) {
-      this.reporter.error(this.reporter.lang('frozenLockfileError'));
-      return true;
+      throw new MessageError(this.reporter.lang('frozenLockfileError'));
     }
 
     if (!this.flags.skipIntegrity && !this.flags.force && match.matches && haveLockfile) {
@@ -391,8 +396,13 @@ export class Install {
       // remove integrity hash to make this operation atomic
       const loc = await this.getIntegrityHashLocation();
       await fs.unlink(loc);
+<<<<<<< HEAD
       this.reporter.step(curr, total, this.reporter.lang('linkingDependencies'));
       await this.linker.init(patterns);
+=======
+      this.reporter.step(curr, total, this.reporter.lang('linkingDependencies'), emoji.get('link'));
+      await this.linker.init(patterns, this.flags.linkDuplicates);
+>>>>>>> 3dc9cf43448da51d3b8890de339a0ed27b12ca62
     });
 
     steps.push(async (curr: number, total: number) => {
@@ -760,7 +770,7 @@ export class Install {
 
   async _checkUpdate(): Promise<void> {
     let latestVersion = await this.config.requestManager.request({
-      url: 'https://yarnpkg.com/latest-version',
+      url: constants.SELF_UPDATE_VERSION_URL,
     });
     invariant(typeof latestVersion === 'string', 'expected string');
     latestVersion = latestVersion.trim();

@@ -64,6 +64,7 @@ commander.option('--prod, --production [prod]', '');
 commander.option('--no-lockfile', "don't read or generate a lockfile");
 commander.option('--pure-lockfile', "don't generate a lockfile");
 commander.option('--frozen-lockfile', "don't generate a lockfile and fail if an update is needed");
+commander.option('--link-duplicates', 'create hardlinks to the repeated modules in node_modules');
 commander.option('--global-folder <path>', '');
 commander.option(
   '--modules-folder <path>',
@@ -91,7 +92,7 @@ let commandName: ?string = args.shift() || '';
 let command;
 
 //
-const getDocsLink = (name) => `https://yarnpkg.com/en/docs/cli/${name || ''}`;
+const getDocsLink = (name) => `${constants.YARN_DOCS}${name || ''}`;
 const getDocsInfo = (name) => 'Visit ' + chalk.bold(getDocsLink(name)) + ' for documentation about this command.';
 
 //
@@ -399,6 +400,8 @@ config.init({
   const exit = () => {
     process.exit(0);
   };
+  // verbose logs outputs process.uptime() with this line we can sync uptime to absolute time on the computer
+  reporter.verbose(`current time: ${new Date().toISOString()}`);
 
   const mutex: mixed = commander.mutex;
   if (mutex && typeof mutex === 'string') {
