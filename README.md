@@ -1,12 +1,12 @@
+  <h1>Emojiless Yarn</h1>
 <p align="center">
-  <h1>Emojiless</h1>
   <a href="https://yarnpkg.com/">
     <img alt="Yarn" src="https://github.com/yarnpkg/assets/blob/master/yarn-kitten-full.png?raw=true" width="546">
   </a>
 </p>
 
 <p align="center">
-  Fast, reliable, and secure dependency management.
+  Fast, reliable, emojiless, and secure dependency management.
 </p>
 
 <p align="center">
@@ -18,7 +18,7 @@
 
 ---
 
-**EMOJILESS**: This is a forked version of yarn that  will mirror official releases of Yarn, minus  emojis. Because I absolutely hate emojis. And I have no soul.
+**EMOJILESS**: This is a forked version of yarn that will mirror official releases of Yarn, minus  emojis. Because I absolutely hate emojis. And I have no soul.
 
 **Fast:** Yarn caches every package it downloads so it never needs to download the same package again. It also parallelizes operations to maximize resource utilization so install times are faster than ever.
 
