@@ -6,6 +6,7 @@ import {MessageError, SpawnError} from '../errors.js';
 import * as constants from '../constants.js';
 import * as child from './child.js';
 import {registries} from '../resolvers/index.js';
+import {fixCmdWinSlashes} from './fix-cmd-win-slashes.js';
 
 const path = require('path');
 
@@ -29,7 +30,7 @@ async function makeEnv(stage: string, cwd: string, config: Config): {
 
   env.npm_lifecycle_event = stage;
   env.npm_node_execpath = env.NODE || process.execPath;
-  env.npm_execpath = path.join(__dirname, '..', '..', 'bin', 'yarn.js');
+  env.npm_execpath = env.npm_execpath || process.mainModule.filename;
 
   // Set the env to production for npm compat if production mode.
   // https://github.com/npm/npm/blob/30d75e738b9cb7a6a3f9b50e971adcbe63458ed3/lib/utils/lifecycle.js#L336
@@ -140,6 +141,9 @@ export async function executeLifecycleScript(
     // s - Strip " quote characters from command.
     // c - Run Command and then terminate
     shFlag = '/d /s /c';
+
+    // handle windows run scripts starting with a relative path
+    cmd = fixCmdWinSlashes(cmd);
 
     // handle quotes properly in windows environments - https://github.com/nodejs/node/issues/5060
     conf.windowsVerbatimArguments = true;

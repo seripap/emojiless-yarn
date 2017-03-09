@@ -8,8 +8,15 @@ import Config from '../src/config.js';
 import makeTemp from './_temp.js';
 import * as fs from '../src/util/fs.js';
 import * as constants from '../src/constants.js';
+import inquirer from 'inquirer';
 
 jasmine.DEFAULT_TIMEOUT_INTERVAL = 60000;
+
+// automatically chose the first available version if cached does not fit
+inquirer.prompt = jest.fn((questions) => {
+  const chosenVersion = questions[0].choices[0];
+  return Promise.resolve({package: chosenVersion});
+});
 
 const path = require('path');
 
@@ -23,18 +30,21 @@ function addTest(pattern, registry = 'npm', init: ?(cacheFolder: string) => Prom
     const reporter = new reporters.NoopReporter({});
 
     const loc = await makeTemp();
-    await fs.mkdirp(path.join(loc, 'node_modules'));
     const cacheFolder = path.join(loc, 'cache');
-    await fs.mkdirp(cacheFolder);
-    if (init) {
-      await init(cacheFolder);
-    }
 
     const config = await Config.create({
       cwd: loc,
       offline,
       cacheFolder,
     }, reporter);
+
+    await fs.mkdirp(path.join(loc, 'node_modules'));
+    await fs.mkdirp(config.cacheFolder);
+
+    if (init) {
+      await init(config.cacheFolder);
+    }
+
     const resolver = new PackageResolver(config, lockfile);
     await resolver.init([{pattern, registry}]);
 

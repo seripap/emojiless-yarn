@@ -18,6 +18,7 @@ import * as languages from './lang/index.js';
 import isCI from 'is-ci';
 
 const util = require('util');
+const EventEmitter = require('events').EventEmitter;
 
 type Language = $Keys<typeof languages>;
 
@@ -36,7 +37,10 @@ export function stringifyLangArgs(args: Array<any>): Array<string> {
       return val.inspect();
     } else {
       try {
-        return JSON.stringify(val) || val + '';
+        const str = JSON.stringify(val) || val + '';
+	// should match all "u001b" that follow an odd number of backslashes and convert them to ESC
+	// we do this because the JSON.stringify process has escaped these characters
+        return str.replace(/((?:^|[^\\])(?:\\{2})*)\\u001[bB]/g, '$1\u001b');
       } catch (e) {
         return util.inspect(val);
       }
@@ -51,7 +55,7 @@ export default class BaseReporter {
 
     this.stdout = opts.stdout || process.stdout;
     this.stderr = opts.stderr || process.stderr;
-    this.stdin = opts.stdin || process.stdin;
+    this.stdin = opts.stdin || this._getStandardInput();
     this.noProgress = !!opts.noProgress || isCI;
     this.isVerbose = !!opts.verbose;
 
@@ -106,6 +110,21 @@ export default class BaseReporter {
 
   _verbose(msg: string) {}
   _verboseInspect(val: any) {}
+
+  _getStandardInput(): Stdin {
+    let standardInput;
+
+    try {
+      standardInput = process.stdin;
+    } catch (e) {
+      delete process.stdin;
+      // $FlowFixMe: this is valid!
+      process.stdin = new EventEmitter();
+      standardInput = process.stdin;
+    }
+
+    return standardInput;
+  }
 
   initPeakMemoryCounter() {
     this.checkPeakMemory();

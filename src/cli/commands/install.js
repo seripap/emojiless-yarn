@@ -6,8 +6,8 @@ import type {Manifest, DependencyRequestPatterns} from '../../types.js';
 import type Config from '../../config.js';
 import type {RegistryNames} from '../../registries/index.js';
 import normalizeManifest from '../../util/normalize-manifest/index.js';
-import {registryNames} from '../../registries/index.js';
 import {MessageError} from '../../errors.js';
+import InstallationIntegrityChecker from '../../integrity-checker.js';
 import Lockfile from '../../lockfile/wrapper.js';
 import lockStringify from '../../lockfile/stringify.js';
 import PackageFetcher from '../../package-fetcher.js';
@@ -20,9 +20,7 @@ import {registries} from '../../registries/index.js';
 import {clean} from './clean.js';
 import * as constants from '../../constants.js';
 import * as fs from '../../util/fs.js';
-import * as crypto from '../../util/crypto.js';
 import map from '../../util/map.js';
-import {sortAlpha} from '../../util/misc.js';
 
 const invariant = require('invariant');
 const semver = require('semver');
@@ -40,13 +38,6 @@ export type InstallCwdRequest = {
   manifest: Object,
 };
 
-export type IntegrityMatch = {
-  actual: string,
-  expected: string,
-  loc: string,
-  matches: boolean,
-};
-
 type Flags = {
   // install
   har: boolean,
@@ -59,7 +50,7 @@ type Flags = {
   flat: boolean,
   lockfile: boolean,
   pureLockfile: boolean,
-  skipIntegrity: boolean,
+  skipIntegrityCheck: boolean,
 
   // add
   peer: boolean,
@@ -126,7 +117,7 @@ function normalizeFlags(config: Config, rawFlags: Object): Flags {
     flat: !!rawFlags.flat,
     lockfile: rawFlags.lockfile !== false,
     pureLockfile: !!rawFlags.pureLockfile,
-    skipIntegrity: !!rawFlags.skipIntegrity,
+    skipIntegrityCheck: !!rawFlags.skipIntegrityCheck,
     frozenLockfile: !!rawFlags.frozenLockfile,
     linkDuplicates: !!rawFlags.linkDuplicates,
 
@@ -178,6 +169,7 @@ export class Install {
 
     this.resolver = new PackageResolver(config, lockfile);
     this.fetcher = new PackageFetcher(config, this.resolver);
+    this.integrityChecker = new InstallationIntegrityChecker(config);
     this.compatibility = new PackageCompatibility(config, this.resolver, this.flags.ignoreEngines);
     this.linker = new PackageLinker(config, this.resolver);
     this.scripts = new PackageInstallScripts(config, this.resolver, this.flags.force);
@@ -196,6 +188,7 @@ export class Install {
   compatibility: PackageCompatibility;
   fetcher: PackageFetcher;
   rootPatternsToOrigin: { [pattern: string]: string };
+  integrityChecker: InstallationIntegrityChecker;
 
   /**
    * Create a list of dependency requests from the current directories manifests.
@@ -300,19 +293,23 @@ export class Install {
   async bailout(
     patterns: Array<string>,
   ): Promise<boolean> {
-    const match = await this.matchesIntegrityHash(patterns);
-    const haveLockfile = await fs.exists(path.join(this.config.cwd, constants.LOCKFILE_FILENAME));
-
-    if (this.flags.frozenLockfile && !this.lockFileInSync(patterns)) {
+    if (this.flags.skipIntegrityCheck || this.flags.force) {
+      return false;
+    }
+    const lockSource = lockStringify(this.lockfile.getLockfile(this.resolver.patterns));
+    const match = await this.integrityChecker.check(patterns, this.lockfile, lockSource, this.flags);
+    if (this.flags.frozenLockfile && match.missingPatterns.length > 0) {
       throw new MessageError(this.reporter.lang('frozenLockfileError'));
     }
 
-    if (!this.flags.skipIntegrity && !this.flags.force && match.matches && haveLockfile) {
+    const haveLockfile = await fs.exists(path.join(this.config.cwd, constants.LOCKFILE_FILENAME));
+
+    if (match.integrityHashMatches && haveLockfile) {
       this.reporter.success(this.reporter.lang('upToDate'));
       return true;
     }
 
-    if (!patterns.length && !match.expected) {
+    if (!patterns.length && !match.integrityFileMissing) {
       this.reporter.success(this.reporter.lang('nothingToInstall'));
       await this.createEmptyManifestFolders();
       await this.saveLockfileAndIntegrity(patterns);
@@ -394,15 +391,9 @@ export class Install {
 
     steps.push(async (curr: number, total: number) => {
       // remove integrity hash to make this operation atomic
-      const loc = await this.getIntegrityHashLocation();
-      await fs.unlink(loc);
-<<<<<<< HEAD
+      await this.integrityChecker.removeIntegrityFile();
       this.reporter.step(curr, total, this.reporter.lang('linkingDependencies'));
-      await this.linker.init(patterns);
-=======
-      this.reporter.step(curr, total, this.reporter.lang('linkingDependencies'), emoji.get('link'));
       await this.linker.init(patterns, this.flags.linkDuplicates);
->>>>>>> 3dc9cf43448da51d3b8890de339a0ed27b12ca62
     });
 
     steps.push(async (curr: number, total: number) => {
@@ -556,6 +547,8 @@ export class Install {
   }
 
   /**
+<<<<<<< HEAD
+=======
    * Check if the loaded lockfile has all the included patterns
    */
 
@@ -571,25 +564,56 @@ export class Install {
   }
 
   /**
+   * Remove offline tarballs that are no longer required
+   */
+
+  async pruneOfflineMirror(lockfile: Object): Promise<void> {
+    const mirror = this.config.getOfflineMirrorPath();
+    if (!mirror) {
+      return;
+    }
+
+    const requiredTarballs = new Set();
+    for (const dependency in lockfile) {
+      const resolved = lockfile[dependency].resolved;
+      if (resolved) {
+        requiredTarballs.add(resolved.split('#')[0]);
+      }
+    }
+
+    const mirrorTarballs = await fs.walk(mirror);
+    for (const tarball of mirrorTarballs) {
+      if (!requiredTarballs.has(tarball.basename)) {
+        await fs.unlink(tarball.absolute);
+      }
+    }
+  }
+
+  /**
    * Save updated integrity and lockfiles.
    */
 
   async saveLockfileAndIntegrity(patterns: Array<string>): Promise<void> {
-    // stringify current lockfile
-    const lockSource = lockStringify(this.lockfile.getLockfile(this.resolver.patterns));
-
-    // write integrity hash
-    await this.writeIntegrityHash(lockSource, patterns);
-
     // --no-lockfile or --pure-lockfile flag
     if (this.flags.lockfile === false || this.flags.pureLockfile) {
       return;
     }
 
-    const inSync = this.lockFileInSync(patterns);
+    const lockfile = this.lockfile.getLockfile(this.resolver.patterns);
 
-    // remove is followed by install with force on which we rewrite lockfile
-    if (inSync && patterns.length && !this.flags.force) {
+    if (this.config.pruneOfflineMirror) {
+      await this.pruneOfflineMirror(lockfile);
+    }
+
+    const lockSource = lockStringify(lockfile);
+
+    // write integrity hash
+    await this.integrityChecker.save(patterns, lockSource, this.flags, this.resolver.usedRegistries);
+
+    const lockFileHasAllPatterns = patterns.filter((p) => !this.lockfile.getLocked(p)).length === 0;
+
+    // remove command is followed by install with force, lockfile will be rewritten in any case then
+    if (lockFileHasAllPatterns && patterns.length && !this.flags.force) {
       return;
     }
 
@@ -604,111 +628,6 @@ export class Install {
 
   _logSuccessSaveLockfile() {
     this.reporter.success(this.reporter.lang('savedLockfile'));
-  }
-
-  /**
-   * Check if the integrity hash of this installation matches one on disk.
-   */
-
-  async matchesIntegrityHash(patterns: Array<string>): Promise<IntegrityMatch> {
-    const loc = await this.getIntegrityHashLocation();
-    if (!await fs.exists(loc)) {
-      return {
-        actual: '',
-        expected: '',
-        loc,
-        matches: false,
-      };
-    }
-
-    const lockSource = lockStringify(this.lockfile.getLockfile(this.resolver.patterns));
-    const actual = this.generateIntegrityHash(lockSource, patterns);
-    const expected = (await fs.readFile(loc)).trim();
-
-    return {
-      actual,
-      expected,
-      loc,
-      matches: actual === expected,
-    };
-  }
-
-  /**
-   * Get the location of an existing integrity hash. If none exists then return the location where we should
-   * write a new one.
-   */
-
-  async getIntegrityHashLocation(): Promise<string> {
-    // build up possible folders
-    const possibleFolders = [];
-    if (this.config.modulesFolder) {
-      possibleFolders.push(this.config.modulesFolder);
-    }
-
-    // get a list of registry names to check existence in
-    let checkRegistryNames = this.resolver.usedRegistries;
-    if (!checkRegistryNames.length) {
-      // we haven't used any registries yet
-      checkRegistryNames = registryNames;
-    }
-
-    // ensure we only write to a registry folder that was used
-    for (const name of checkRegistryNames) {
-      const loc = path.join(this.config.cwd, this.config.registries[name].folder);
-      possibleFolders.push(loc);
-    }
-
-    // if we already have an integrity hash in one of these folders then use it's location otherwise use the
-    // first folder
-    const possibles = possibleFolders.map((folder): string => path.join(folder, constants.INTEGRITY_FILENAME));
-    let loc = possibles[0];
-    for (const possibleLoc of possibles) {
-      if (await fs.exists(possibleLoc)) {
-        loc = possibleLoc;
-        break;
-      }
-    }
-    return loc;
-  }
-  /**
-   * Write the integrity hash of the current install to disk.
-   */
-
-  async writeIntegrityHash(lockSource: string, patterns: Array<string>): Promise<void> {
-    const loc = await this.getIntegrityHashLocation();
-    invariant(loc, 'expected integrity hash location');
-    await fs.mkdirp(path.dirname(loc));
-    await fs.writeFile(loc, this.generateIntegrityHash(lockSource, patterns));
-  }
-
-  /**
-   * Generate integrity hash of input lockfile.
-   */
-
-  generateIntegrityHash(lockfile: string, patterns: Array<string>): string {
-    const opts = [lockfile];
-
-    opts.push(`patterns:${patterns.sort(sortAlpha).join(',')}`);
-
-    if (this.flags.flat) {
-      opts.push('flat');
-    }
-
-    if (this.config.production) {
-      opts.push('production');
-    }
-
-    const linkedModules = this.config.linkedModules;
-    if (linkedModules.length) {
-      opts.push(`linked:${linkedModules.join(',')}`);
-    }
-
-    const mirror = this.config.getOfflineMirrorPath();
-    if (mirror != null) {
-      opts.push(`mirror:${mirror}`);
-    }
-
-    return crypto.hash(opts.join('-'), 'sha256');
   }
 
   /**

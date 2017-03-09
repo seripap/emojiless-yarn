@@ -24,11 +24,14 @@ export const SELF_UPDATE_VERSION_URL = 'https://yarnpkg.com/latest-version';
 export const SELF_UPDATE_TARBALL_URL = 'https://yarnpkg.com/latest.tar.gz';
 export const SELF_UPDATE_DOWNLOAD_FOLDER = 'updates';
 
+// cache version, bump whenever we make backwards incompatible changes
+export const CACHE_VERSION = 1;
+
 // lockfile version, bump whenever we make backwards incompatible changes
 export const LOCKFILE_VERSION = 1;
 
 // max amount of network requests to perform concurrently
-export const NETWORK_CONCURRENCY = 15;
+export const NETWORK_CONCURRENCY = 16;
 
 // max amount of child processes to execute concurrently
 export const CHILD_CONCURRENCY = 5;
@@ -86,17 +89,4 @@ export function getPathKey(platform: string, env: Env): string {
   }
 
   return pathKey;
-}
-
-function getUid(): ?number {
-  if (process.platform !== 'win32' && process.getuid) {
-    return process.getuid();
-  }
-  return null;
-}
-
-export const ROOT_USER = isRootUser(getUid());
-
-export function isRootUser(uid: ?number): boolean {
-  return uid === 0;
 }
